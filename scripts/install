@@ -65,8 +65,7 @@ fetch_and_extract /opt/yunohost/ihatemoney/src/ ihatemoney
 
 # Prepare venv
 init_virtualenv
-sudo /opt/yunohost/ihatemoney/venv/bin/pip install -r /opt/yunohost/ihatemoney/src/requirements.txt
-sudo /opt/yunohost/ihatemoney/venv/bin/pip install 'gunicorn>=19.3.0' PyMySQL
+sudo /opt/yunohost/ihatemoney/venv/bin/pip install 'gunicorn>=19.3.0' PyMySQL 'ihatemoney>=2,<3'
 
 # Fix permissions
 fix_permissions /opt/yunohost/ihatemoney/src
@@ -98,10 +97,8 @@ then
     ynh_app_setting_set $app unprotected_uris "/"
 fi
 
-# Configure Nginx and reload
-sed -i "s@PATHTOCHANGE@$path@g" ../conf/nginx.conf
-# Fix double-slash for domain-root install
-sed -i "s@location //@location /@" ../conf/nginx.conf
+# Configure Nginx
+configure_nginx "$path"
 
 sudo install -o root -g root -m644 \
      ../conf/nginx.conf /etc/nginx/conf.d/$domain.d/ihatemoney.conf

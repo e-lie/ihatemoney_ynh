@@ -11,12 +11,13 @@ app=$YNH_APP_INSTANCE_NAME
 # Installation paths
 INSTALL_DIR=/opt/yunohost/ihatemoney
 PIP=${INSTALL_DIR}/venv/bin/pip
-NEW_REQUIREMENTS=${INSTALL_DIR}/src-new/requirements.txt
 
 # Source YunoHost helpers
 . /usr/share/yunohost/helpers
 
-domain=$(ynh_app_setting_get "$app" domain)
+domain=$(ynh_app_setting_get $app domain)
+path=$(ynh_app_setting_get $app path)
+
 
 # Source local utils
 source _common.sh
@@ -42,26 +43,18 @@ function exit_properly () {
         sudo mv /opt/yunohost/ihatemoney/venv{-old,}
     fi
     # Remove downloaded code
-    sudo rm -rf ${INSTALL_DIR}/src-new/
     ynh_die "Upgrade script failed, aborted and rolled back the installation"
 }
 trap exit_properly ERR
 
 
-# Upgrade code
-fetch_and_extract ${INSTALL_DIR}/src-new/ ihatemoney
+# Upgrade code and dependencies
+sudo ${PIP} install --upgrade  'gunicorn>=19.3.0' PyMySQL 'ihatemoney>=2,<3'
 
-fix_permissions ${INSTALL_DIR}/src-new/
-
-# Upgrade dependencies
-sudo ${PIP} install -r ${NEW_REQUIREMENTS}
-sudo ${PIP} install 'gunicorn>=19.3.0' 'PyMySQL'
+#fix_permissions ${INSTALL_DIR}/src-new/
 
 # Everything went ok ? Let's keep this code.
-sudo rm -rf ${INSTALL_DIR}/src
 sudo rm -rf ${INSTALL_DIR}/venv-old
-sudo mv ${INSTALL_DIR}/src-new ${INSTALL_DIR}/src
-
 
 ## Migration from old versions of the package
 
@@ -102,6 +95,26 @@ fi
 sudo sed -i "s@'mysql://@'mysql+pymysql://@g" ${ihatemoney_conf_path}
 
 
+
+# MIGRATION: Remove old code (from pre-2.x versions, not using pip)
+
+sudo rm -rf ${INSTALL_DIR}/src
+
+
+
+# MIGRATION: change the static path (from pre-2.x versions, not using pip)
+grep -q /opt/yunohost/ihatemoney/src/ /etc/nginx/conf.d/${domain}.d/ihatemoney.conf
+if [[ ! $? -eq 0 ]]
+then
+    configure_nginx "$path"
+    sudo install -o root -g root -m644 /etc/nginx/conf.d/${domain}.d/ihatemoney.conf
+fi
+
+
+
+# MIGRATION: fetch the static path from
+
+#TODO : factor nginx to install and regenerate
 
 # Restart backend
 sudo supervisorctl restart budget

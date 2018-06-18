@@ -35,6 +35,7 @@ fetch_and_extract() {
 fix_permissions() {
     local SRC_DIR=$1
 
+    # FIXME: what are perms to fix since we migrated to pip ?
     sudo find $SRC_DIR -type f | while read LINE; do sudo chmod 640 "$LINE" ; done
     sudo find $SRC_DIR -type d | while read LINE; do sudo chmod 755 "$LINE" ; done
     sudo chown -R ihatemoney:ihatemoney $SRC_DIR
@@ -61,6 +62,17 @@ create_system_dirs() {
 init_virtualenv () {
     sudo virtualenv /opt/yunohost/ihatemoney/venv --python /usr/bin/python3
 }
+
+configure_nginx () {
+    local path=$1
+
+    sed -i "s@PATHTOCHANGE@$path@g" ../conf/nginx.conf
+    # Fix double-slash for domain-root install
+    sed -i "s@location //@location /@" ../conf/nginx.conf
+}
+
+
+
 
 ### Backported helpers (from testing)
 
